@@ -82,7 +82,7 @@ void whatdogtimerreset(){
 
 void reinicia (){
         Serial.println ("WhatDog Reset ");
-        portENTER_CRITICAL (&myMutex);
+        //portENTER_CRITICAL (&myMutex);
         if( Task1 != NULL ) //ota
         {
             //vTaskDelete(Task1); //se resetar o ota ele para o processo
@@ -148,7 +148,7 @@ void reinicia (){
         Serial.println ("WhatDog restart ");
         reiniciarele ();
         ESP.restart();  //tells the SDK to reboot, so its a more clean reboot ESP.restart(). ESP.reset() is a h
-        portEXIT_CRITICAL (&myMutex);
+        //portEXIT_CRITICAL (&myMutex);
 }
 
 void reiniciarele (){

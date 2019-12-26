@@ -64,6 +64,7 @@ void iniciawifi(){
         MDNS.addService("_iot", "_tcp", SERVER_PORT);
     }
  }
+ 
 }
 
 //rotina que inicializa a rede wifi da placa
@@ -72,6 +73,7 @@ void wifiinit(){
 
   iniciawifi();
    //rotina que ira fazer o registro do nome de forma continua MDNS
+   
   xTaskCreatePinnedToCore(
     MDNSCLIENT, // Function to implement the task 
     "MDNSCLIENT", // Name of the task 
@@ -80,6 +82,7 @@ void wifiinit(){
     10,  // Priority of the task 
     &Task11,  // Task handle. 
     0); // Core where the task should run no mesmo cor que roda o Lora
+    
  delay (1000);
 }
 
@@ -117,7 +120,7 @@ void procuraconcentrador (){
     IP.toCharArray(ConcentradorIP, 16);
     counter++;
     if (counter > 10) {//tenta se conectar 10 vezes
-      IP = "192.168.0.50";
+      IP = "192.168.0.51";
       IP.toCharArray(ConcentradorIP, 16);
       return;
     }
@@ -230,7 +233,7 @@ void MDNSCLIENT(void * parameter){
   IPAddress ipinterno;
   char msglog [100] = "";
   char ROTINA_EXECUTADA [15] = "MDNSCLIENT";
-    
+   
   for(;;){ //loop infinito da rotina
     uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
     sendHeap( ROTINA_EXECUTADA, uxHighWaterMark);
@@ -242,7 +245,7 @@ void MDNSCLIENT(void * parameter){
     } 
     if (IPWifi == ""){
       iniciawifi();
-    }                
+    }              
     envio = String (NOME_DISPOSITIVO) + "," + String (VERSAO) + "," + String ("MDNS Client :") + IPWifi + String (" Heap: ") + String (uxHighWaterMark);
     lorasend(String(envio), CODIGO_DISPOSITIVO,LABORATORIOLORA); //fica a cada minuto avisando que esta vivo
     if ((NOME_DISPOSITIVO == "Torre1") || (NOME_DISPOSITIVO == "Torre2"))  {
@@ -254,9 +257,9 @@ void MDNSCLIENT(void * parameter){
     if (NOME_DISPOSITIVO == "Concentrador") {
       envio.toCharArray(msglog,100);
       sendValuesmqttshttp (contador, msglog, VARIABLE_LABEL_LOGCON);
-    }                      
+    }                     
     vTaskDelay (120000);   //a cada 2 min  
-    }   
+    } 
 }
 
 //rotina que fica procurando o concentrador

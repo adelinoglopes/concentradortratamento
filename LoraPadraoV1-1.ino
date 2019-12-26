@@ -15,7 +15,7 @@ void lorainit(){
     if (counter > 30) //verifica 30 vezes de Lora ativou
       break;
     counter++;
-    delay (1000);
+    delay (100);
     }
   if (!LoRa.begin(BAND,PABOOST)) {
     Serial.println("Starting LoRa failed!");
@@ -59,15 +59,21 @@ void lorainit(){
 //normalmente o destino e o concentrador
 void lorasend(String outgoing, byte origem, byte destino)
 {
+  long contadorrecebendo = 0;
   
   whatdogtimerreset();
   while (recebendolora) //somente transmite se nao estiver na rotina de recepcao do lora
   {
       Serial.println("Esta recebendo, aguardar para poder transmitir"); 
-      whatdogtimerreset();
-      delay (1000);
-    }
-      portENTER_CRITICAL (&myMutex); //nao deixa fazer mudanÃ§a de processamento
+      delay (100);
+      contadorrecebendo++;
+      if (contadorrecebendo > 10) {
+        contadorrecebendo = 0;
+        recebendolora = false;
+      }
+  }
+      //portENTER_CRITICAL (&myMutex); //nao deixa fazer mudanÃ§a de processamento
+      //taskENTER_CRITICAL( &myMutex );
       transmitindolora = true;
       outgoing = outgoing + "," + String(contador);
       LoRa.beginPacket();                   // start packet
@@ -77,13 +83,13 @@ void lorasend(String outgoing, byte origem, byte destino)
       LoRa.write(outgoing.length());        // add payload length
       LoRa.print(outgoing);                 // add payload
       LoRa.endPacket();                     // finish packet and send it
+      transmitindolora = false;
       //LoRa.receive();
       Serial.print("Lora send: "); 
       Serial.println(outgoing); 
       msgCount++;                           // increment message ID
-      transmitindolora = false;
       whatdogtimerreset();
-      portEXIT_CRITICAL (&myMutex); //terminou a trava de mudanÃ§a de processamento
+      //portEXIT_CRITICAL (&myMutex); //terminou a trava de mudanÃ§a de processamento
 }
 
 //rotina para receber pacotes se for destinado ao respectivo lora
@@ -91,21 +97,28 @@ void lorasend(String outgoing, byte origem, byte destino)
 
 String lorareceive( byte localAddress)
 {
-  
+
+  long contadortransmitindo =0;
   //long freqErr = 0;
   //LoRa.receive();
   while (transmitindolora) //somente ira receber quando parar de transmitir
   {
     Serial.println("Esta trasmitindo, aguardar para poder receber"); 
-    delay (1000);
+    delay (100);
+    contadortransmitindo++;
+    if (contadortransmitindo > 100) {
+      contadortransmitindo =0;
+      transmitindolora = false;
+    }
+    
   }
- portENTER_CRITICAL (&myMutex);
+ //portENTER_CRITICAL (&myMutex);
   recebendolora = true;
   String incoming = "";
   //Serial.println("Lorareceive");
   int packetSize = LoRa.parsePacket();
   if (packetSize > 0) {
-    //Serial.println("Pacote > 0"); 
+    Serial.println("Pacote > 0"); 
     // read packet header bytes:
     int recipient = LoRa.read();          // recipient address
     byte sender = LoRa.read();            // sender address
@@ -131,13 +144,15 @@ String lorareceive( byte localAddress)
     
     if (incomingLength != incoming.length()) //verifica se o tamanho esta correto
     {   // check length for error
-      //Serial.println("error: message length does not match length");
+      Serial.println("error: message length does not match length");
       recebendolora = false;
       incoming = "";
       whatdogtimerreset();
-      portEXIT_CRITICAL (&myMutex);
+      //portEXIT_CRITICAL (&myMutex);
       return incoming;                             // skip rest of function
     }
+    Serial.print("incoming: ");
+    Serial.println(incoming);
     
     // if the recipient isn't this device or broadcast,
     //0xFF Ã© brodcast enviado para todos os Lora
@@ -147,7 +162,7 @@ String lorareceive( byte localAddress)
       recebendolora = false;
       incoming = "";
       whatdogtimerreset();
-      portEXIT_CRITICAL (&myMutex);
+      //portEXIT_CRITICAL (&myMutex);
       return incoming;                            // skip rest of function
     }
     
@@ -163,13 +178,13 @@ String lorareceive( byte localAddress)
     recebendolora = false;
     //Serial.println("LoraRecive: " + String (incoming));
     whatdogtimerreset();
-    portEXIT_CRITICAL (&myMutex);
+    //portEXIT_CRITICAL (&myMutex);
     return incoming;
   }
 
   recebendolora = false;
   incoming = "";
-  portEXIT_CRITICAL (&myMutex);
+  //portEXIT_CRITICAL (&myMutex);
   return incoming;
 }
 

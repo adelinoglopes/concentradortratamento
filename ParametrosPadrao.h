@@ -58,13 +58,15 @@ char VARIABLE_LABEL_CHAMINECINZA [15] = "chaminecinza";
 char VARIABLE_LABEL_RONDA [15] = "ronda";
 char VARIABLE_LABEL_HORA [15] = "hora";
 char VARIABLE_LABEL_WHATDOG [15] = "whatdog";
-char VARIABLE_LABEL_VAZAOPOCO [15] = "poco";
+char VARIABLE_LABEL_VAZAOPOCO1 [15] = "poco1";
+char VARIABLE_LABEL_VAZAOPOCO2 [15] = "poco2";
 char VARIABLE_LABEL_TORRE1 [15] = "torre1";
 char VARIABLE_LABEL_TORRE2 [15] = "torre2";
+char VARIABLE_LABEL_TORRE3 [15] = "torre3";										   
 char VARIABLE_LABEL_LOGCON [15] = "logcon";
 char VARIABLE_LABEL_HEAP [15] = "heap";
 char VARIABLE_LABEL_LORAERR [15] = "loraerr";
-char VARIABLE_LABEL_POCODAE [15] = "pocodae";
+char VARIABLE_LABEL_VAZAOSAIDA [15] = "vazaosaida";
 WiFiClient ubidots; //inicializacao da biblioteca para conectar com o Ubidots
 PubSubClient client(ubidots); // publica a comunicacao
 
@@ -100,11 +102,13 @@ TaskHandle_t Task10; //Atualiza o relogio local ao receber pelo Lora
 #define BICICLETALORA 0XBD  // Bicicleta Eletrica GPS
 #define TURBIDES 0XBE // turbides unidade tratamento
 #define CINZA 0XBF // turbides unidade tratamento
-#define POCO 0XC0 // vazao unidade tratamento
+#define POCO1 0XC0 // poco1
 #define REPETER1 0XC1 // lora torre1
 #define REPETER2 0XC2 // lora torre2
+#define REPETER3 0XC6 // lora torre3									
 #define PH 0XC3 // lora PH
-#define POCODAE 0XC4 // POCODAE vazao saida do poco
+#define VAZAOSAIDA 0XC4 // saida DAEE
+#define POCO2 0XC5 //poco2
 TaskHandle_t Task3; //ponteiro que é alocado a rotina no procesador 0 que fica em loop
 byte msgCount = 0; 
 String envio = "";  
@@ -153,13 +157,16 @@ TaskHandle_t Task9; //ponteiro que é alocado a rotina no procesador 0 que fica 
 //usuario obersaiot@gmail.com
 //senha Ober1@3$5
 //https://portal.vidadesilicio.com.br/banco-de-dados-com-google-planilhas-com-esp/
-#define numerosensores 4
+#define numerosensores 7
 String planilhagoogle[numerosensores][2] = {
            {"objeto","GET /forms/d/e/1FAIpQLSdZtJgyZcESHnHzRaqkXvJmu4zSTtWNs1a1vkmxLgjpoNWSfA/formResponse?ifq&entry.1283193040="}, 
            {"distancia","GET /forms/d/e/1FAIpQLSerpdnwO9b47wNwwPsQ7d0YdJTyFnB9edxTDRz5K-H1KbWswA/formResponse?ifq&entry.811133558="},
            {"ph","GET /forms/d/e/1FAIpQLSdPyPxykwZ0lb682MPxm2x7TLXRAr-X3mgIyNYshkWPvGVb-Q/formResponse?ifq&entry.369290149="},
-           {"turbides","GET /forms/d/e/1FAIpQLSdgQXWLY2vX09srrdh5uJLAIXA9TxBFWpSu6tnYWAafKvVvKw/formResponse?ifq&entry.2078479405="}
-      };
+           {"turbides","GET /forms/d/e/1FAIpQLSdgQXWLY2vX09srrdh5uJLAIXA9TxBFWpSu6tnYWAafKvVvKw/formResponse?ifq&entry.2078479405="},
+           {"poco1","GET /forms/d/e/1FAIpQLSdaJoDJnNRuKOYfGKa0p3eUYT75p9rso1nu5RmQFo5trrzICA/formResponse?ifq&entry.266798070="},
+           {"vazaosaida","GET /forms/d/1zgvO9hPD04f1jz1atSZDb6Ogm7PXWsbmjGikN-OJkiA/formResponse?ifq&entry.295441093="},  
+           {"poco2","GET /forms/d/e/1FAIpQLSeBXuHzia4FkFMJ1OvwSmofeNPdw4_ZGv20VtxQ8wPW5kgM9w/formResponse?ifq&entry.229113309="} 
+      }; 
 WiFiClientSecure google;
 
 //OTA 

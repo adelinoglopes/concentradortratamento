@@ -309,3 +309,69 @@ void sendValuesmqttmapahttp(float contador,float valor1, float valor2, char titu
  
   whatdogtimerreset();
 }
+
+
+float GetToUbidotsHTTP(char* variable_label) {
+//https://help.ubidots.com/en/articles/513294-connect-a-linkit-one-to-ubidots-using-wi-fi-over-http
+  int value_index;
+  String value_string;
+  String value;
+  int contador = 0;
+  int timeout = 0;
+  String response = "";
+  char payload[250];
+
+  /* Connecting the client */
+  while (!ubidots.connect(SERVER, PORT)) {
+    ubidots.stop();
+    ubidots.connect(SERVER, PORT);
+    delay (200);
+    contador++;
+    if (contador > 10) {
+      ubidots.stop();
+      ubidots.connect(SERVER, PORT);
+      break;
+    }
+  }
+  if (ubidots.connected()) {
+    // Build HTTP GET request
+    ubidots.print(F("GET /api/v1.6/devices/"));
+    ubidots.print(DEVICE_LABEL);
+    ubidots.print(F("/"));
+    ubidots.print(variable_label);
+    ubidots.print(F("/values/?page_size=1&token="));
+    ubidots.print(TOKEN);
+    ubidots.println(F(" HTTP/1.1"));
+    ubidots.println(F("Content-Type: application/json"));
+    ubidots.print(F("Host: "));
+    ubidots.println(SERVER);
+    ubidots.println();
+    int count = 0;
+    while (!ubidots.available()  && count < 10000) {
+      count++;
+      delay(1);
+    }
+
+    int v;
+    while (ubidots.available()) {
+      v = ubidots.read();
+      if (ubidots < 0) {
+        Serial.println("No response.");
+        break;
+      }
+      //Serial.println((char)v);
+      response.concat((char)v);
+    }
+    //Serial.println("Printing response:");
+    value_index = response.indexOf("\"value\": ");
+    value_string = response.substring(value_index);
+    value = value_string.substring(9, value_string.indexOf(","));
+    //Serial.println(value);
+    return atof(value.c_str());
+  }
+  else {
+    Serial.println("Couldn't connect to Ubidots");
+    return -1;
+  } 
+  whatdogtimerreset();
+}
