@@ -18,6 +18,13 @@
 #include <Update.h> //atualizar pela web OTA
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include "freertos/queue.h"
+#include "driver/gpio.h"
+#include "driver/adc.h"
+#include "esp_system.h"
+#include "esp_adc_cal.h"				 						
 
 //Definicoes padrao - Se alterar tem que alterar nos outros projetos
 UBaseType_t uxHighWaterMark;
@@ -25,13 +32,14 @@ portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
 
 //WIFI 
 #define SERVER_PORT 5000
-#define MAX_SRV_CLIENTS 10
+#define MAX_SRV_CLIENTS 20
 char ConcentradorIP [16] = "";
 String ConcentradorDNS = "Concentrador"; 
 String IPWifi = "";
 WiFiServer serverwifi(SERVER_PORT);
 TaskHandle_t Task11; //registro do nome MDNS de forma continua MDNSCLIENT
 TaskHandle_t Task12; //procura o ip do concentrador para o lora torre
+TaskHandle_t Task15; //envia mensagem recebida por wifi
 
 //MQTT - Ubidots Padrao
 #//define TOKEN "BBFF-XI1x7xp8VjUxbdPEdoTwJuH0znpgWh" //Coloque seu TOKEN do Ubidots aqui
@@ -67,6 +75,8 @@ char VARIABLE_LABEL_LOGCON [15] = "logcon";
 char VARIABLE_LABEL_HEAP [15] = "heap";
 char VARIABLE_LABEL_LORAERR [15] = "loraerr";
 char VARIABLE_LABEL_VAZAOSAIDA [15] = "vazaosaida";
+char VARIABLE_LABEL_VALVULAESTACAO [15] = "valvulaestacao";
+char VARIABLE_LABEL_RFIDPORTARIA [15] = "rfide";														   
 WiFiClient ubidots; //inicializacao da biblioteca para conectar com o Ubidots
 PubSubClient client(ubidots); // publica a comunicacao
 
@@ -109,6 +119,8 @@ TaskHandle_t Task10; //Atualiza o relogio local ao receber pelo Lora
 #define PH 0XC3 // lora PH
 #define VAZAOSAIDA 0XC4 // saida DAEE
 #define POCO2 0XC5 //poco2
+#define VALVULASAIDA 0XC6 //valuvula saida estacao tratamento
+#define RFIDPORTARIA 0XC7 //rfid da portaria											
 TaskHandle_t Task3; //ponteiro que é alocado a rotina no procesador 0 que fica em loop
 byte msgCount = 0; 
 String envio = "";  
@@ -157,7 +169,7 @@ TaskHandle_t Task9; //ponteiro que é alocado a rotina no procesador 0 que fica 
 //usuario obersaiot@gmail.com
 //senha Ober1@3$5
 //https://portal.vidadesilicio.com.br/banco-de-dados-com-google-planilhas-com-esp/
-#define numerosensores 7
+#define numerosensores 8
 String planilhagoogle[numerosensores][2] = {
            {"objeto","GET /forms/d/e/1FAIpQLSdZtJgyZcESHnHzRaqkXvJmu4zSTtWNs1a1vkmxLgjpoNWSfA/formResponse?ifq&entry.1283193040="}, 
            {"distancia","GET /forms/d/e/1FAIpQLSerpdnwO9b47wNwwPsQ7d0YdJTyFnB9edxTDRz5K-H1KbWswA/formResponse?ifq&entry.811133558="},
@@ -165,7 +177,8 @@ String planilhagoogle[numerosensores][2] = {
            {"turbides","GET /forms/d/e/1FAIpQLSdgQXWLY2vX09srrdh5uJLAIXA9TxBFWpSu6tnYWAafKvVvKw/formResponse?ifq&entry.2078479405="},
            {"poco1","GET /forms/d/e/1FAIpQLSdaJoDJnNRuKOYfGKa0p3eUYT75p9rso1nu5RmQFo5trrzICA/formResponse?ifq&entry.266798070="},
            {"vazaosaida","GET /forms/d/1zgvO9hPD04f1jz1atSZDb6Ogm7PXWsbmjGikN-OJkiA/formResponse?ifq&entry.295441093="},  
-           {"poco2","GET /forms/d/e/1FAIpQLSeBXuHzia4FkFMJ1OvwSmofeNPdw4_ZGv20VtxQ8wPW5kgM9w/formResponse?ifq&entry.229113309="} 
+           {"poco2","GET /forms/d/e/1FAIpQLSeBXuHzia4FkFMJ1OvwSmofeNPdw4_ZGv20VtxQ8wPW5kgM9w/formResponse?ifq&entry.229113309="},
+           {"rfide","GET /forms/d/e/1FAIpQLSc4bliFie8h794-wJBxm_Je-MOO9uKoBqgrQMgWe5mMDIyIew/formResponse?ifq&entry.87164232="} 		 
       }; 
 WiFiClientSecure google;
 
@@ -276,7 +289,7 @@ RTC_DATA_ATTR int bootCount, bootCount_anterior = 0; //RTC_DATA_ATTR aloca a var
 #define WAKEUP_PIN GPIO_NUM_34
 
 //variaveis padroes
-int contador = 1;
+float contador = 1;
 float loaddelay = 0;
 TaskHandle_t Task13; //torreenvio
 TaskHandle_t Task14; //concentrador envio
@@ -296,7 +309,8 @@ task10 NTP Relocio Recebe
 task11 MDNSCLIENT 
 task12 CONCENTRADORIP
 task13 torreenvio
-Task14; //concentrador envio
+task14; //concentrador envio ainda nao esta pronta a rotina
+task15; envia wifi
 
 Pinos
 4- OLED - SDA
