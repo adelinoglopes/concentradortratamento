@@ -62,6 +62,8 @@ void iniciawifi(){
     MDNS.begin(enderecodns);
     if (MDNS.begin(enderecodns)) {
         MDNS.addService("_iot", "_tcp", SERVER_PORT);
+        Serial.print("Registro Nome MDNS: ");
+        Serial.println(enderecodns);
     }
  }
  
@@ -105,43 +107,62 @@ void wifiserverinit (){ //usado no contredor, sobe o servidor wifi para receber 
   serverwifi.begin();
 }
 
-void procuraconcentrador (){
-  int counter = 0;
+String procuraconcentrador  (String dispositivo){
+  
   IPAddress ipinterno;
+  IPAddress serverIp;
   String IP;
+  String retornoip  = "";
+  int cont =0;
   //unsigned int lastStringLength = 0;
   //char enderecodns [20];
 
-  ConcentradorDNS.trim();
-  IPAddress serverIp = MDNS.queryHost(ConcentradorDNS); //procurando o ip do concentrador
-  while (serverIp.toString() == "0.0.0.0") {
-    serverIp = MDNS.queryHost(ConcentradorDNS);
-    IP = "0.0.0.0";
-    IP.toCharArray(ConcentradorIP, 16);
-    counter++;
-    if (counter > 10) {//tenta se conectar 10 vezes
-      IP = "192.168.0.51";
-      IP.toCharArray(ConcentradorIP, 16);
-      return;
+  IP.trim(); 
+  if (dispositivo != "") {
+    dispositivo.trim();
+    while ((IP == "") && (cont <10)) {
+      serverIp = MDNS.queryHost(dispositivo);
+      IP = String(serverIp[0]) + '.' + String(serverIp[1]) + '.' + String(serverIp[2]) + '.' + String(serverIp[3]);
+									   
+			  
+												   
+						  
+      //IP.toCharArray(retornoip, 16); 
+      cont++;
+      delay (100);
     }
-    delay(100);                     
+    return IP;
   }
-  IP = String(serverIp[0]) + '.' + String(serverIp[1]) + '.' + String(serverIp[2]) + '.' + String(serverIp[3]);
-  IP.toCharArray(ConcentradorIP, 16);
+  ConcentradorDNS.trim();
+  IP = "";
+  cont = 0;
+  while ((IP == "") && (cont <10)) {
+    serverIp = MDNS.queryHost(ConcentradorDNS); //procurando o ip do concentrador
+    ConcentradorIP = String(serverIp[0]) + '.' + String(serverIp[1]) + '.' + String(serverIp[2]) + '.' + String(serverIp[3]);
+    //IP.toCharArray(ConcentradorIP, 16);
+    cont++;
+    delay (100);              
+  }
+  //IP = "";
+  //IP.toCharArray(retornoip, 16);
+  if (ConcentradorIP == "") {
+    ConcentradorIP = "192.168.1.51";
+    //IP.toCharArray(ConcentradorIP, 16);
+  }
+  return ConcentradorIP;
 }
-
 void wificlientinit (){
   
     if (WiFi.status() != WL_CONNECTED) {
       WiFi.disconnect(true);
       iniciawifi();
     }
-    if (IPWifi = "0.0.0.0") {
+    if (IPWifi == "0.0.0.0") {
       WiFi.disconnect(true);
       iniciawifi();
     } 
     if (WiFi.status() == WL_CONNECTED){
-      procuraconcentrador ();
+      ConcentradorIP = procuraconcentrador (ConcentradorDNS);
     }       
     
    //rotina que ira fazer a procura do ip do concentrador
@@ -156,48 +177,68 @@ void wificlientinit (){
   delay (1000);
 }
 
-void wifisend(String envio){ 
+void wifisend(String envio, String ipdestino, String dnsdestino){ 
   int contador = 0;
   char mensagem [300] = "";
   IPAddress ipinterno;
+  char ipchar [16] = "";
   //unsigned int lastStringLength = 0;
   //char enderecodns [20];
 
   whatdogtimerreset();
   WiFiClient clientewifi;
-  
-  //Se nÃ£o conseguiu se conectar entÃ£o retornamos
-  while (!clientewifi.connect(ConcentradorIP, SERVER_PORT)){
-      contador++;   
-      if ( (contador == 5) || (contador == 10) || (contador == 15) ) {
-        if (WiFi.status() != WL_CONNECTED) {
-          WiFi.disconnect(true);
-          //Serial.print("WL_CONNECTED Wifi: "); 
-          iniciawifi();
+  if (ipdestino == "") {
+    ipdestino = procuraconcentrador (dnsdestino);
+    Serial.print("WifiSend ipdestino = ");
+    Serial.println(ipdestino);
+    }
+  if (ipdestino != "") {
+    ipdestino.toCharArray(ipchar, 16);
+    Serial.print("WifiSend ipdchar = ");
+    Serial.println(ipchar);
+    while (!clientewifi.connect(ipchar, SERVER_PORT)){
+        contador++;   
+        if ( (contador == 5) || (contador == 10) || (contador == 15) ) {
+          if (WiFi.status() != WL_CONNECTED) {
+            WiFi.disconnect(true);
+            iniciawifi();
+          }
+          if (IPWifi == "0.0.0.0") {
+            WiFi.disconnect(true);
+            iniciawifi();
+          } 
+          if (WiFi.status() == WL_CONNECTED){
+            ipdestino = procuraconcentrador (dnsdestino);
+          }       
         }
-        if (IPWifi = "0.0.0.0") {
-          WiFi.disconnect(true);
-          //Serial.print("0000 Wifi: "); 
-          iniciawifi();
-        } 
-        if (WiFi.status() == WL_CONNECTED){
-          procuraconcentrador ();
-        }       
-      }
-      if (contador > 5) {//tenta se conectar 10 vezes
-        return;
-      }
-      delay(100);
-  }
-  if ((clientewifi.connect(ConcentradorIP, SERVER_PORT)) && (WiFi.status() == WL_CONNECTED)){
-    envio.toCharArray(mensagem,300); //envia para a mensagem para o concentrador
-    clientewifi.write(mensagem);
-    clientewifi.flush();
-    clientewifi.stop();
-    Serial.print("Mensagem Wifi: "); 
-    Serial.println(mensagem); 
-  }else {
-    Serial.println("Nao se conectou ao concentrador ");
+								  
+								
+										 
+					   
+		  
+										   
+								 
+				
+	   
+        if (contador > 10) {//tenta se conectar 10 vezes
+          return;
+        }
+        delay(100);
+    }
+    ipdestino.toCharArray(ipchar, 16);
+    if ((clientewifi.connect(ipchar, SERVER_PORT)) && (WiFi.status() == WL_CONNECTED)){
+      envio.toCharArray(mensagem,300); //envia para a mensagem para o concentrador
+      clientewifi.write(mensagem);
+      clientewifi.flush();
+      clientewifi.stop();
+      Serial.print("Mensagem Wifi: "); 
+      Serial.println(mensagem); 
+      Serial.print("WifiSend ipdestino = ");
+      Serial.println(ipchar);
+    } else {
+      Serial.println("Nao se conectou ao destino ");
+    }  
+    return;  
   }
 }
 
@@ -232,11 +273,11 @@ void MDNSCLIENT(void * parameter){
   //int counter = 1;
   IPAddress ipinterno;
   char msglog [100] = "";
-  char ROTINA_EXECUTADA [15] = "MDNSCLIENT";
+  //char ROTINA_EXECUTADA [15] = "MDNSCLIENT";
    
   for(;;){ //loop infinito da rotina
-    uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
-    sendHeap( ROTINA_EXECUTADA, uxHighWaterMark);
+    //uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
+    //sendHeap( ROTINA_EXECUTADA, uxHighWaterMark);
     if (WiFi.status() != WL_CONNECTED){
       iniciawifi();
     }      
@@ -251,7 +292,7 @@ void MDNSCLIENT(void * parameter){
     if ((NOME_DISPOSITIVO == "Torre1") || (NOME_DISPOSITIVO == "Torre2"))  {
       envio.toCharArray(msglog,100);
       if (WiFi.status() == WL_CONNECTED){
-        wifisend(envio);
+        wifisend(envio, "", NOME_DISPOSITIVO);
       }
     } 
     if (NOME_DISPOSITIVO == "Concentrador") {
@@ -269,12 +310,12 @@ void CONCENTRADORST(void * parameter){
   //int counter = 1;
   IPAddress ipinterno;
   char msglog [100] = "";
-  char ROTINA_EXECUTADA [15] = "CONCENTRADORST";
-    sendHeap( ROTINA_EXECUTADA, uxHighWaterMark);
+  //char ROTINA_EXECUTADA [15] = "CONCENTRADORST";
+  //sendHeap( ROTINA_EXECUTADA, uxHighWaterMark);
   for(;;){ //loop infinito da rotina
     
-    uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
-    sendHeap( ROTINA_EXECUTADA, uxHighWaterMark);
+    //uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
+    //sendHeap( ROTINA_EXECUTADA, uxHighWaterMark);
     if (WiFi.status() != WL_CONNECTED){
       iniciawifi();
     }      
@@ -285,14 +326,14 @@ void CONCENTRADORST(void * parameter){
       iniciawifi();
     } 
     if (WiFi.status() == WL_CONNECTED){
-      procuraconcentrador ();
+      ConcentradorIP = procuraconcentrador (ConcentradorDNS);
     }
     envio = String (NOME_DISPOSITIVO) + "," + String (VERSAO) + "," + String ("Client :") + IPWifi + String (" Concentrador :") + ConcentradorIP + String (" Heap: ") + String (uxHighWaterMark);
     lorasend(String(envio), CODIGO_DISPOSITIVO,LABORATORIOLORA); 
     if ((NOME_DISPOSITIVO == "Torre1") || (NOME_DISPOSITIVO == "Torre2"))  {
       envio.toCharArray(msglog,100);
       if (WiFi.status() == WL_CONNECTED){
-        wifisend(envio);
+        wifisend(envio,"",NOME_DISPOSITIVO);
       }
     } 
     if (NOME_DISPOSITIVO == "Concentrador") {

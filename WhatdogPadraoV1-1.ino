@@ -38,7 +38,8 @@ void whatdog(void * parameter){
         if ((NOME_DISPOSITIVO == "Torre1") || (NOME_DISPOSITIVO == "Torre2"))  {
           envio.toCharArray(msglog,50);
           if (WiFi.status() == WL_CONNECTED){
-            wifisend(envio);
+            //wifisend(envio);
+			wifisend(envio, "", NOME_DISPOSITIVO);
           }
         } 
         if (NOME_DISPOSITIVO == "Concentrador") {
@@ -61,7 +62,8 @@ void whatdog(void * parameter){
         if ((NOME_DISPOSITIVO == "Torre1") || (NOME_DISPOSITIVO == "Torre2"))  {
           envio.toCharArray(msglog,50);
           if (WiFi.status() == WL_CONNECTED){
-            wifisend(envio);
+            //wifisend(envio);
+			wifisend(envio, "", NOME_DISPOSITIVO);
           }
         } 
         if (NOME_DISPOSITIVO == "Concentrador") {

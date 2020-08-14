@@ -7,6 +7,7 @@
 #include <NTPClient.h> //atualiza tempo NTP https://github.com/taranais/NTPClient
 #include "TimeLib.h" //mantem relogio https://github.com/geekfactory/TimeLib
 //#include "SSD1306.h" // alias for #include "SSD1306Wire.h" desliguei oled nao usando
+#include <U8x8lib.h> //nova interface oled https://robotzero.one/heltec-wifi-kit-32/ https://github.com/olikraus/U8g2_Arduino/blob/master/examples/u8x8/GraphicsTest/GraphicsTest.ino
 #include <PubSubClient.h> //Biblioteca para as publicações MQTT https://github.com/knolleary/pubsubclient
 #include <SPI.h> //para o lora
 #include <LoRa.h> //radio lora
@@ -33,8 +34,10 @@ portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
 //WIFI 
 #define SERVER_PORT 5000
 #define MAX_SRV_CLIENTS 20
-char ConcentradorIP [16] = "";
+String ConcentradorIP = "";
+String dispositivoIP = "";						  
 String ConcentradorDNS = "Concentrador"; 
+String dispositivoDNS = "";						   
 String IPWifi = "";
 WiFiServer serverwifi(SERVER_PORT);
 TaskHandle_t Task11; //registro do nome MDNS de forma continua MDNSCLIENT
@@ -76,7 +79,13 @@ char VARIABLE_LABEL_HEAP [15] = "heap";
 char VARIABLE_LABEL_LORAERR [15] = "loraerr";
 char VARIABLE_LABEL_VAZAOSAIDA [15] = "vazaosaida";
 char VARIABLE_LABEL_VALVULAESTACAO [15] = "valvulaestacao";
+char VARIABLE_LABEL_VALVULAREUSO [15] = "valvulareuso";
+char VARIABLE_LABEL_NIVELREUSO [15] = "nivelreuso";
 char VARIABLE_LABEL_RFIDPORTARIA [15] = "rfide";														   
+char VARIABLE_LABEL_PISCINA [15] = "piscina";
+char VARIABLE_LABEL_OBJETOENTRADA [15] = "entrada";										   
+char VARIABLE_LABEL_PHBOMBA [15] = "phbomba"; 
+char VARIABLE_LABEL_RELEBOMBA [15] = "relebomba"; 		
 WiFiClient ubidots; //inicializacao da biblioteca para conectar com o Ubidots
 PubSubClient client(ubidots); // publica a comunicacao
 
@@ -120,15 +129,19 @@ TaskHandle_t Task10; //Atualiza o relogio local ao receber pelo Lora
 #define VAZAOSAIDA 0XC4 // saida DAEE
 #define POCO2 0XC5 //poco2
 #define VALVULASAIDA 0XC6 //valuvula saida estacao tratamento
-#define RFIDPORTARIA 0XC7 //rfid da portaria											
+#define RFIDPORTARIA 0XC7 //rfid da portaria							
+#define VALVULAREUSO 0XC8 //valuvula saida caixa reuso pet
+#define NIVELREUSO 0XC9 //nivel caixa reuso  		
+#define PHBOMBA 0XCA //rfid da portaria  		
 TaskHandle_t Task3; //ponteiro que é alocado a rotina no procesador 0 que fica em loop
 byte msgCount = 0; 
 String envio = "";  
 boolean recebendolora = false;
 boolean transmitindolora = false;
 
-/* desliguei oled nao usando
+
 //OLED - Padrao
+/*
 #define SDA    4
 #define SCL   15
 #define RST   16 //RST must be set by software
@@ -139,6 +152,11 @@ boolean transmitindolora = false;
 //SSD1306  display(0x3c, SDA, SCL, RST);
 SSD1306  display(0x3c, SDA, SCL); //inicializa o display
 */
+// the OLED used https://github.com/olikraus/U8g2_Arduino/blob/master/examples/u8x8/GraphicsTest/GraphicsTest.ino
+U8X8_SSD1306_128X64_NONAME_SW_I2C u8x8(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 16);
+
+
+
 
 //GPS da Placa TTGO
 HardwareSerial ss(1);
@@ -178,7 +196,7 @@ String planilhagoogle[numerosensores][2] = {
            {"poco1","GET /forms/d/e/1FAIpQLSdaJoDJnNRuKOYfGKa0p3eUYT75p9rso1nu5RmQFo5trrzICA/formResponse?ifq&entry.266798070="},
            {"vazaosaida","GET /forms/d/1zgvO9hPD04f1jz1atSZDb6Ogm7PXWsbmjGikN-OJkiA/formResponse?ifq&entry.295441093="},  
            {"poco2","GET /forms/d/e/1FAIpQLSeBXuHzia4FkFMJ1OvwSmofeNPdw4_ZGv20VtxQ8wPW5kgM9w/formResponse?ifq&entry.229113309="},
-           {"rfide","GET /forms/d/e/1FAIpQLSc4bliFie8h794-wJBxm_Je-MOO9uKoBqgrQMgWe5mMDIyIew/formResponse?ifq&entry.87164232="} 		 
+           {"rfide","GET /forms/d/e/1FAIpQLSdgn6zX5WFfTFynN8eedpuqkLI7qrL12b6NCXHLFLKhypHSFg/formResponse?ifq&entry.1210639124="}		 
       }; 
 WiFiClientSecure google;
 
@@ -311,6 +329,8 @@ task12 CONCENTRADORIP
 task13 torreenvio
 task14; //concentrador envio ainda nao esta pronta a rotina
 task15; envia wifi
+task16; valvula recebendo turbides valvula caixa
+Task17; //para receber nivel caixa reuso
 
 Pinos
 4- OLED - SDA

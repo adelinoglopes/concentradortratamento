@@ -317,9 +317,9 @@ float GetToUbidotsHTTP(char* variable_label) {
   String value_string;
   String value;
   int contador = 0;
-  int timeout = 0;
+  
   String response = "";
-  char payload[250];
+  
 
   /* Connecting the client */
   while (!ubidots.connect(SERVER, PORT)) {
